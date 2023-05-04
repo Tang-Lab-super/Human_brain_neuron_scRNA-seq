@@ -40,7 +40,7 @@ dev.off()
 # GW11B3_d20 vs. GA20W_d24 differential analysis for each celltype
 All_DEs <- data.frame()
 
-for(cluster in c("GluN","IPC","Astro","RG","Prolif_NPC","IN")){
+for(cluster in c("EN","EOMES+ IPC","Astro","RG","ASCL1+ IPC","IN_Precursor","IN")){
 	data_cluster <- subset(data_merged,idents=cluster)
 	Idents(data_cluster) <- "sample"
 	cluster_des <- FindMarkers(data_cluster, assay="RNA", slot="data", min.pct =0, logfc.threshold =0, test.use = "MAST", ident.1="GW11B3_d20", ident.2="GA20W_d24")
