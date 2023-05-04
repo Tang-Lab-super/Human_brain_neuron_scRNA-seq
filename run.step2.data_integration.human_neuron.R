@@ -94,10 +94,12 @@ dev.off()
 
 ### rename cluster idents
 data_merged <- RenameIdents(object = data_merged,
-'0'='GluN', '1'='GluN', '11'='GluN', '12'='GluN', '18'='GluN', '3'='IPC', '14'='Astro', '15'='Astro', '9'='RG', '16'='RG', '13'='Oligo', '7'='Prolif_NPC', '5'='IN', '8'='IN', '2'='IN', '4'='IN', '10'='IN', '6'='IN', '17'='IN')
+'0'='EN', '1'='EN', '11'='EN', '12'='EN', '18'='EN', '3'='EOMES+ IPC', '14'='Astro', '15'='Astro', '9'='RG', '16'='RG', '13'='Oligo', '7'='ASCL1+ IPC', '5'='IN_Precursor', '8'='IN_Precursor', '2'='IN', '4'='IN', '10'='IN', '6'='IN', '17'='IN')
 table(Idents(data_merged))
-#      GluN        IPC      Astro         RG      Oligo Prolif_NPC         IN
-#      4200        769        273        424        182        416       3521
+#          EN   EOMES+ IPC        Astro           RG        Oligo   ASCL1+ IPC
+#        4200          769          273          424          182          416
+#IN_Precursor           IN
+#         963         2558
 
 cluster_colors <- rev(RColorBrewer::brewer.pal(8,"Paired"))[c(1,6,3,8,4,5,7,2)]
 pdf(file="data_combined.harmony.umap.celltype.noLegend.plot.pdf", height=7,width=7.3)
@@ -118,12 +120,12 @@ dev.off()
 #IN:GAD1,GAD2
 #ASTR:SLC1A3
 pdf("data_combined.harmony.celtype_FeaturePlot.pdf",height=8.5,width=10.5)
-FeaturePlot(data_merged, features = c("HOPX", "EOMES","MKI67","OLIG1","NEUROD2","SLA","GAD1","GAD2","SLC1A3"),ncol=3,min.cutoff="q5",max.cutoff="q95",pt.size=0.1,order=T)
+FeaturePlot(data_merged, features = c("HOPX", "EOMES","MKI67","OLIG1","NEUROD2","SLA","ASCL1","GAD2","SLC1A3"),ncol=3,min.cutoff="q5",max.cutoff="q95",pt.size=0.1,order=T)
 dev.off()
 
 # dotplot visualization
 pdf("data_combined.harmony.celtype_DotPlot.pdf",height=5,width=6)
-DotPlot(data_merged, features = c("NEUROD2", "NEUROD6","EOMES","SLC1A3","ATP1A2","HOPX","VIM","MKI67","SOX2","OLIG1","OLIG2","GAD2","DLX1","DLX2"), col.min=0, col.max=1) + coord_flip() + RotatedAxis()
+DotPlot(data_merged, features = c("NEUROD2", "NEUROD6","EOMES","SLC1A3","ATP1A2","HOPX","VIM","MKI67","TOP2A","SOX2","OLIG1","OLIG2","GAD2","DLX1","DLX2","ASCL1"), col.min=0, col.max=1) + coord_flip() + RotatedAxis()
 dev.off()
 
 ### sample-cluster stats
