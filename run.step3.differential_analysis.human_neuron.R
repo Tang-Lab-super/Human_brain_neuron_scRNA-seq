@@ -18,7 +18,6 @@ options(future.globals.maxSize = 30 * 1024^3)
 ########################################################################################################################
 # load data
 data_merged <- readRDS("data_merged.rds")
-data_merged
 
 library(MAST)
 

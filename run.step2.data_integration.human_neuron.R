@@ -18,18 +18,7 @@ options(future.globals.maxSize = 30 * 1024^3)
 ########################################################################################################################
 # load pre-processed data
 GW11B3_d20_Right <- readRDS("Human_neuron_GW11B3_d20_Right.rds")
-GW11B3_d20_Right
-#An object of class Seurat
-#24423 features across 13962 samples within 1 assay
-#Active assay: RNA (24423 features, 2000 variable features)
-# 2 dimensional reductions calculated: pca, umap
-
 GA20W_d24 <- readRDS("Human_neuron_GA20W_d24.rds")
-GA20W_d24
-#An object of class Seurat
-#21424 features across 4785 samples within 1 assay
-#Active assay: RNA (21424 features, 2000 variable features)
-# 2 dimensional reductions calculated: pca, umap
 
 ##### data combined and harmony integration
 # downsampling GW11B3_d20_Right to 5000 cells
@@ -48,7 +37,7 @@ GW11B3_d20_Right_ds
 
 GA20W_d24
 #An object of class Seurat
-#21424 features across 4785 samples within 1 assay
+#21424 features across 4780 samples within 1 assay
 #Active assay: RNA (21424 features, 2000 variable features)
 # 2 dimensional reductions calculated: pca, umap
 
@@ -57,8 +46,8 @@ data_merged <- merge(GA20W_d24,y=GW11B3_d20_Right_ds)
 
 # get variable genes
 genes_var <- unique(c(VariableFeatures(GA20W_d24),VariableFeatures(GW11B3_d20_Right_ds)))
-#length(genes_var)
-#[1] 3162
+length(genes_var)
+#[1] 3179
 
 # only scaled data can be applied for PCA
 data_merged <- ScaleData(data_merged)
@@ -84,31 +73,85 @@ data_merged <- RunHarmony(data_merged,
        plot_convergence = TRUE)
 dev.off()
 
-data_merged <- RunUMAP(data_merged, dims = 1:20, reduction = "harmony")
-data_merged <- FindNeighbors(data_merged, reduction = "harmony", dims = 1:20)
-data_merged <- FindClusters(data_merged,resolution=0.7)
+data_merged <- RunUMAP(data_merged, dims = 1:30, reduction = "harmony")
+data_merged <- FindNeighbors(data_merged, reduction = "harmony", dims = 1:30)
+data_merged <- FindClusters(data_merged,resolution=1.5)
 
-pdf("data_combined.harmony.pdf",width=15,height=7.5)
+pdf("data_combined.harmony.pdf",width=16,height=7.2)
 DimPlot(data_merged, group.by = c("sample", "ident"), ncol = 2, label=T)
+dev.off()
+
+data_merged <- subset(data_merged,idents=c(8,18),invert=T)
+
+### celltype annotation ###
+##### data reference mapping #####
+ref <- readRDS("InVitro_Full_STICR.rds")
+ref
+#An object of class Seurat
+#61023 features across 121290 samples within 3 assays
+#Active assay: RNA (33538 features, 0 variable features)
+# 2 other assays present: SCT, integrated
+# 2 dimensional reductions calculated: pca, umap
+table(Idents(ref))
+#   1    2    3    4    5    6    7    8    9   10   11   12   13   14   15   16
+#6573 5888 5491 5408 5025 4913 4602 4589 4577 4537 4476 4337 4275 4029 3849 3801
+#  17   18   19   20   21   22   23   24   25   26   27   28   29   30   31   32
+#3777 3623 3334 3264 3255 3051 3034 2947 2911 2805 2415 2278 2241 2011 1917  898
+#  33   34
+# 616  543
+pdf(file="reference.umap.cluster.plot.pdf", height=7,width=8.2)
+DimPlot(ref, reduction = "umap", label=TRUE, pt.size=0.6,label.size = 4)
+dev.off()
+
+ref <- RenameIdents(object = ref,
+'3'='DLX2+ IPCs', '4'='DLX2+ IPCs', '6'='DLX2+ IPCs', '23'='DLX2+ IPCs', '29'='DLX2+ IPCs', '1'='Glial', '7'='Glial', '8'='Glial', '10'='Glial', '22'='Glial', '24'='Glial', '25'='Glial', '30'='Glial', '31'='EOMES+ IPCs', '16'='EN', '21'='EN', '26'='EN', '2'='IN', '5'='IN','27'='IN', '28'='IN','32'='IN', '14'='IN','18'='IN', '11'='IN','12'='IN', '13'='IN','19'='IN', '9'='IN','20'='IN', '15'='IN','17'='IN', '33'='IN','34'='Other')
+table(Idents(ref))
+# DLX2+ IPCs       Glial EOMES+ IPCs          EN          IN       Other
+#      21087       31221        1917        9861       56661         543
+ref$celltype <- Idents(ref)
+pdf(file="reference.umap.celltype.plot.pdf", height=7,width=8)
+DimPlot(ref, reduction = "umap", label=TRUE, pt.size=0.6,label.size = 4)
+dev.off()
+
+DefaultAssay(ref) <- "integrated"
+ref.anchors <- FindTransferAnchors(reference = ref, query = data_merged, dims = 1:30, reference.reduction = "pca")
+predictions <- TransferData(anchorset = ref.anchors, refdata = ref$celltype, dims = 1:30)
+head(predictions)
+#                            predicted.id prediction.score.Glial
+#GW20_d20_AAACCTGAGCAGCCTC-1   DLX2+ IPCs             0.00000000
+#GW20_d20_AAACCTGAGCTATGCT-1   DLX2+ IPCs             0.00000000
+#GW20_d20_AAACCTGAGGGCTTGA-1           EN             0.00000000
+
+data_merged <- AddMetaData(data_merged, metadata = predictions)
+table(data_merged$predicted.id)
+# DLX2+ IPCs          EN EOMES+ IPCs       Glial          IN
+#       2254        4685         105         524        1683
+
+pdf(file="data_combined.harmony.umap.celltype.reference.plot.pdf", height=7,width=8.2)
+DimPlot(data_merged, reduction = "umap", group.by = "predicted.id", label = TRUE, label.size = 3,
+    repel = TRUE) + ggtitle("Reference annotations")
 dev.off()
 
 ### rename cluster idents
 data_merged <- RenameIdents(object = data_merged,
-'0'='EN', '1'='EN', '11'='EN', '12'='EN', '18'='EN', '3'='EOMES+ IPC', '14'='Astro', '15'='Astro', '9'='RG', '16'='RG', '13'='Oligo', '7'='ASCL1+ IPC', '5'='IN_Precursor', '8'='IN_Precursor', '2'='IN', '4'='IN', '10'='IN', '6'='IN', '17'='IN')
+'0'='EN', '1'='EN', '3'='EN', '14'='EN', '15'='EN', '21'='EN', '2'='EOMES+ IPC', '16'='Astro', '13'='RG', '20'='RG', '17'='Oligo', '9'='ASCL1+ IPC', '6'='IN_Precursor', '7'='IN_Precursor', '12'='IN', '19'='IN', '5'='IN', '11'='IN', '4'='IN', '10'='IN', '22'='IN', '23'='IN')
 table(Idents(data_merged))
 #          EN   EOMES+ IPC        Astro           RG        Oligo   ASCL1+ IPC
-#        4200          769          273          424          182          416
+#        3770          871          202          353          193          382
 #IN_Precursor           IN
-#         963         2558
+#         943         2537
+
+data_merged$celltype <- Idents(data_merged)
+table(data_merged$celltype)
 
 cluster_colors <- rev(RColorBrewer::brewer.pal(8,"Paired"))[c(1,6,3,8,4,5,7,2)]
-pdf(file="data_combined.harmony.umap.celltype.noLegend.plot.pdf", height=7,width=7.3)
-DimPlot(data_merged, reduction = "umap", label=TRUE, cols=cluster_colors, pt.size=0.6, label.size = 4) + NoLegend()
+pdf(file="data_combined.harmony.umap.celltype.plot.pdf", height=7,width=8)
+DimPlot(data_merged, reduction = "umap", label=TRUE, cols=cluster_colors, pt.size=0.5, label.size = 4)
 dev.off()
 
 sample_colors <- c('#d73027','#4575b4')
-pdf(file="data_combined.harmony.umap.sample.noLegend.plot.pdf", height=7,width=7.3)
-DimPlot(data_merged, reduction = "umap", group.by="sample", label=TRUE, cols=sample_colors, pt.size=0.6, label.size = 4) + NoLegend()
+pdf(file="data_combined.harmony.umap.sample.plot.pdf", height=7,width=8)
+DimPlot(data_merged, reduction = "umap", group.by="sample", label=TRUE, cols=sample_colors, pt.size=0.5, label.size = 4)
 dev.off()
 
 # featureplot visualization
@@ -163,13 +206,8 @@ theme(
 dev.off()
 
 # save metadata information
-data_merged$cellType <- Idents(data_merged)
 meta_data <- data_merged@meta.data
 head(meta_data)
-#                                orig.ident nCount_RNA nFeature_RNA    sample
-#GA20W_d24_AAACCTGAGCAGCCTC-1 SeuratProject      14249         5047 GA20W_d24
-#GA20W_d24_AAACCTGAGCTATGCT-1 SeuratProject      10937         4251 GA20W_d24
-#GA20W_d24_AAACCTGAGGGCTTGA-1 SeuratProject       3399         2231 GA20W_d24
 write.table(meta_data,"All_sample_meta_data.txt",sep="\t",quote=F)
 
 saveRDS(data_merged,"data_merged.rds")
