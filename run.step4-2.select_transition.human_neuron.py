@@ -5,7 +5,6 @@ import os
 
 
 ######################################################### gw11
-os.chdir('/data3/yuhan/Project/lr/URD/yyc_result/')
 
 # load raw transition and cell subtypes annotation
 df = pd.read_csv('axialGW11.allTransition.txt', index_col=0, sep='\t')
